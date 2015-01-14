@@ -16,12 +16,15 @@ my $work_path = '/root/fs_update/';
 my $exception = {
 	warning => {
 		Del => [
-			'', # For folders on root.
+			qr#^[^/]+$#, # For folders on root.
+			qr#^[^/]+/[^/]+$#, # For folders on root.
 		],
 	},
-	ignore => [
-		'40_10_ソフト/soft',
-	],
+	ignore => {
+		ALL => [
+			qr#^40_10_ソフト/soft/?$#,
+		],
+	},
 };
 
 $| = 1;
@@ -36,23 +39,23 @@ GetOptions (
 
 my $chk_act = {
 	None => {
-		base => 1,
-		diff => 0,
+		base => -1,
+		diff => -1,
 	},
 	Del => {
-		base => 1,
+		base => -1,
 		diff => 0,
-		deed => 'rm -rf BASE',
+		deed => 'rm -rf \'BASE\'',
 	},
 	Modify => {
-		base => 1,
+		base => -1,
 		diff => 2,
-		deed => 'cp -r DIFF BASE',
+		deed => 'cp -r \'DIFF\' \'BASE\'',
 	},
 	New => {
-		base => 0,
+		base => -1,
 		diff => 1,
-		deed => 'cp -r DIFF BASE',
+		deed => 'cp -r \'DIFF\' \'BASE\'',
 	},
 };
 
@@ -88,6 +91,10 @@ if ($check) {
 	while (my $row = $csv->getline($fh)) {
 		if ($row_nu++) {
 			my $type = $row->[2];
+			# next unless $type eq 'None';
+			# next unless $type eq 'Del';
+			# next unless $type eq 'Modify';
+			# next unless $type eq 'New';
 			if (!defined $types{$type}) {
 				$types{$type} = [];
 			}
@@ -110,7 +117,7 @@ if ($check) {
 			my $ret = item_check(\@actions, $fs_root, $unpack_path, 
 				$type, $row->[0]->[0], $row->[0]->[1]);
 			$err_suffix = '.need_fix' if $ret;
-			$actions[-1] .= " # $_rown - $ret";
+			$actions[-1] .= " # $_rown($type) - $ret";
 		}
 		print "\n";
 	}
@@ -150,12 +157,20 @@ sub item_check {
 
 	my @err;
 	if (defined $chk_act->{$_type}) {
-		foreach my $ign (@{$exception->{ignore}}) {
-			my $_path_file = $_file ? "$_path/${_file}" : $_path;
-			$_path_file =~ s/^\/*//;
-			$_path_file =~ s/\/*$//;
-			if ($_path_file =~ m/^${ign}/) {
-				push @err, 106; # Ignore file exists in csv.
+		if (defined $exception->{ignore}->{ALL} || defined $exception->{ignore}->{$_type}) {
+			my @_ign_list;
+			push @_ign_list, @{$exception->{ignore}->{ALL}}
+				if defined $exception->{ignore}->{ALL};
+			push @_ign_list, @{$exception->{ignore}->{$_type}}
+				if defined $exception->{ignore}->{$_type};
+
+			foreach my $ign (@_ign_list) {
+				my $_path_file = $_file ? "$_path/${_file}" : $_path;
+				$_path_file =~ s/^\/*//;
+				$_path_file =~ s/\/*$//;
+				if ($_path_file =~ $ign) {
+					push @err, 202; # Ignore file exists in csv.
+				}
 			}
 		}
 
@@ -165,35 +180,37 @@ sub item_check {
 			$_path_file =~ s/\/*$//;
 
 			foreach my $wtp (@{$exception->{warning}->{$_type}}) {
-				if ($wtp eq '' && $_path_file !~ m{/}) {
-					push @err, 107; # Warning on root folder.
-				}
-
-				if ($_path_file =~ m/^${wtp}/) {
-					push @err, 108; # Warning on specify file/folder.
+				if ($_path_file =~ $wtp) {
+					push @err, 201; # Warning on specify file/folder.
 				}
 			}
 		}
 
-		if ($chk_act->{$_type}->{base} && ! -e $base_file) {
-			push @err, 101; # Base file no exists.
-		}
-		elsif (!$chk_act->{$_type}->{base} && -e $base_file) {
-			push @err, 102; # Base file exists.
-		}
-
-		if ($chk_act->{$_type}->{diff} && ! -e $diff_file) {
-			push @err, 103; # Diff file no exists.
-		}
-		elsif (!$chk_act->{$_type}->{diff} && -e $diff_file) {
-			push @err, 104 if ($_file); # Diff file exists (except folder).
+		if ($chk_act->{$_type}->{base} != -1) {
+			if ($chk_act->{$_type}->{base} && ! -e $base_file) {
+				push @err, 101; # Base file no exists.
+			}
+			elsif (!$chk_act->{$_type}->{base} && -e $base_file) {
+				push @err, 102; # Base file exists.
+			}
 		}
 
-		if ($chk_act->{$_type}->{base} && $chk_act->{$_type}->{diff}) {
-			if ($_file) {
-				my $diff_rst = `diff "$base_file" "$diff_file"`;
-				if (!$diff_rst) {
-					push @err, 105; # Base/Diff file no difference (except folder).
+		if ($chk_act->{$_type}->{diff} != -1) {
+			if ($chk_act->{$_type}->{diff} && ! -e $diff_file) {
+				push @err, 103; # Diff file no exists.
+			}
+			elsif (!$chk_act->{$_type}->{diff} && -e $diff_file) {
+				push @err, 104 if ($_file); # Diff file exists (except folder).
+			}
+		}
+
+		if ($chk_act->{$_type}->{base} != -1 && $chk_act->{$_type}->{diff} != -1) {
+			if ($chk_act->{$_type}->{base} && $chk_act->{$_type}->{diff}) {
+				if ($_file) {
+					my $diff_rst = `diff "$base_file" "$diff_file"`;
+					if (!$diff_rst) {
+						push @err, 105; # Base/Diff file no difference (except folder).
+					}
 				}
 			}
 		}
@@ -204,6 +221,8 @@ sub item_check {
 
 	if (defined $chk_act->{$_type}->{deed}) {
 		my $action = $chk_act->{$_type}->{deed};
+		$diff_file =~ s#'#'"'"'#;
+		$base_file =~ s#'#'"'"'#;
 		$action =~ s/DIFF/${diff_file}/g;
 		$action =~ s/BASE/${base_file}/g;
 		$action = @err ? "#W $action": $action;
