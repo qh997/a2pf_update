@@ -58,6 +58,10 @@ my $chk_act = {
 
 my $check_ok = 'check_ok_TTAG.sh';
 
+(-e $fs_root) or die "Cannot found `$file_7z'.\n";
+(-e $work_path) or die "Cannot found `$file_7z'.\n";
+(-e $file_7z) or die "Cannot found `$file_7z'.\n";
+
 if ($check) {
 	my $unpack_path = $file_7z;
 	$unpack_path =~ s/^.*\///;
