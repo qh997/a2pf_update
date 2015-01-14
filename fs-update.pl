@@ -10,8 +10,8 @@ binmode(STDIN,  ':encoding(utf8)');
 binmode(STDOUT, ':encoding(utf8)');
 binmode(STDERR, ':encoding(utf8)');
 
-my $fs_root = '/media/10.1.42.140/機種統括/apf_apn_ten/apf_apn_ten_fs/';
-my $work_path = '/tmp/fs-update';
+my $fs_root = '/var/ada_fs/ModelOmnibus/apf_apn_ten/apf_apn_ten_fs/';
+my $work_path = '/root/fs_update/';
 
 my $exception = {
 	warning => {
@@ -30,7 +30,7 @@ my $file_7z = '';
 my $extract = 0;
 GetOptions (
     'c|check' => \$check,
-    't|file=s' => \$file_7z,
+    'f|file=s' => \$file_7z,
     'x|extract' => \$extract,
 );
 
