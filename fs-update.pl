@@ -230,7 +230,7 @@ sub item_check {
 		$action =~ s/DIFF/${diff_file}/g;
 		$action =~ s/BASE/${base_file}/g;
 		$action = @err ? "#W $action": $action;
-		$action =~ s#[^/]+/?/../##g;
+		$action =~ s%[^/]+/+\.\./+%%;
 
 		# print $action."\n";
 		push @$_actn, $action;
