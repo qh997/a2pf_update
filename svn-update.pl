@@ -88,9 +88,10 @@ else {
 			chmod 0744, $act;
 
 			print "\n\$ $act\n";
-			my $ret = readpipe("$act");
-			my $ret_value = $?;
+			my $ret_value = system("$act 2>&1 | tee cmd.log");
 			chmod 0644, $act;
+			my $ret = `cat cmd.log`;
+			`rm -rf cmd.log`;
 
 			my $id = `cat $act | sed -n '2p'`;
 			$id =~ s/^#\s+(\w+)\s+(\d+)\s+->\s+(\d+).*$/$1-$2-$3/;
