@@ -9,9 +9,15 @@ use utf8;
 binmode(STDIN,  ':encoding(utf8)');
 binmode(STDOUT, ':encoding(utf8)');
 binmode(STDERR, ':encoding(utf8)');
+$| = 1;
 
-my $fs_root = '/var/ada_fs/ModelOmnibus/apf_apn_ten/apf_apn_ten_fs/';
-my $work_path = '/root/fs_update/';
+my %conf = get_config('settings.conf');
+my $fs_root = $conf{'fileserver-root'};
+my $work_root = $0;
+$work_root =~ s%.*/(.*)\.pl%$1%;
+$work_root = $conf{'work-root'}.'/'.$work_root;
+my $archive_root = $work_root.'/'.$conf{'zips-path'};
+my $log_root = $work_root.'/'.$conf{'log-path'};
 
 my $exception = {
 	warning => {
@@ -27,16 +33,6 @@ my $exception = {
 	},
 };
 
-$| = 1;
-my $check = 0;
-my $file_7z = '';
-my $extract = 0;
-GetOptions (
-    'c|check' => \$check,
-    'f|file=s' => \$file_7z,
-    'x|extract' => \$extract,
-);
-
 my $chk_act = {
 	None => {
 		base => -1,
@@ -50,19 +46,28 @@ my $chk_act = {
 	Modify => {
 		base => -1,
 		diff => 2,
-		deed => 'cp -r \'DIFF\' \'BASE\'',
+		deed => 'cp -r \'DIFF\' \'BASE/../\'',
 	},
 	New => {
 		base => -1,
 		diff => 1,
-		deed => 'cp -r \'DIFF\' \'BASE\'',
+		deed => 'cp -r \'DIFF\' \'BASE/../\'',
 	},
 };
 
+my $check = 0;
+my $file_7z = '';
+my $extract = 0;
+GetOptions (
+    'c|check' => \$check,
+    'f|file=s' => \$file_7z,
+    'x|extract' => \$extract,
+);
+
 my $check_ok = 'check_ok_TTAG.sh';
 
-(-e $fs_root) or die "Cannot found `$file_7z'.\n";
-(-e $work_path) or die "Cannot found `$file_7z'.\n";
+(-e $fs_root) or die "Cannot found `$fs_root'.\n";
+(-e $work_root) or die "Cannot found `$work_root'.\n";
 (-e $file_7z) or die "Cannot found `$file_7z'.\n";
 
 if ($check) {
@@ -70,16 +75,14 @@ if ($check) {
 	$unpack_path =~ s/^.*\///;
 	$unpack_path =~ s/\.7z$//;
 	my $time_tag = $unpack_path;
-	$unpack_path = "$work_path/$unpack_path";
+	$unpack_path = "$work_root/$unpack_path";
 	$time_tag =~ s/.*-//;
 	my $filelist_csv = "$unpack_path/filelist-${time_tag}.csv";
 	$check_ok =~ s/TTAG/$time_tag/;
 
 	`rm -rf $check_ok*`;
 
-	if ($extract) {
-		unpack_7z($file_7z, $unpack_path);
-	}
+	unpack_7z($file_7z, $unpack_path) if ($extract);
 
 	print 'Parsing csv ...';
 	my %types;
@@ -91,10 +94,10 @@ if ($check) {
 	while (my $row = $csv->getline($fh)) {
 		if ($row_nu++) {
 			my $type = $row->[2];
-			# next unless $type eq 'None';
-			# next unless $type eq 'Del';
-			# next unless $type eq 'Modify';
-			# next unless $type eq 'New';
+			# next if $type eq 'None';
+			# next if $type eq 'Del';
+			# next if $type eq 'Modify';
+			# next if $type eq 'New';
 			if (!defined $types{$type}) {
 				$types{$type} = [];
 			}
@@ -124,8 +127,9 @@ if ($check) {
 
 	open my $ofh, "> $check_ok$err_suffix";
 	binmode($ofh, ':encoding(utf8)');
-	print $ofh "#!/bin/bash\n";
+	print $ofh "#!/bin/bash -ex\n";
 	print $ofh join "\n", @actions;
+	print $ofh "\n";
 	close $ofh;
 }
 else {
@@ -226,6 +230,7 @@ sub item_check {
 		$action =~ s/DIFF/${diff_file}/g;
 		$action =~ s/BASE/${base_file}/g;
 		$action = @err ? "#W $action": $action;
+		$action =~ s#[^/]+/?/../##g;
 
 		# print $action."\n";
 		push @$_actn, $action;
@@ -235,4 +240,26 @@ sub item_check {
 	}
 
 	return @err ? join '+', @err : 0;
+}
+
+sub get_config {
+	my $config_file = shift;
+
+	open my $CF, "< $config_file" or die 'cannot open file : '.$config_file;
+	my @file_content = <$CF>;
+	close $CF;
+
+	my %configs;
+	foreach my $line (@file_content) {
+		chomp $line;
+
+		next if $line =~ m/^\s*#/;
+		next if $line !~ m/=/;
+
+		if ($line =~ m{^\s*(.*?)\s*=\s*(.*)\s*$}) {
+			$configs{$1} = $2;
+		}
+	}
+
+	return %configs;
 }
