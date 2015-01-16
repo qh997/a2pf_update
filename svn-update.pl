@@ -19,8 +19,8 @@ $work_root = $conf{'work-root'}.'/'.$work_root;
 my $zips_root = $work_root.'/'.$conf{'zips-path'};
 my $log_root = $work_root.'/'.$conf{'log-path'};
 
-`mkdir -p $zips_root`;
-`mkdir -p $log_root`;
+`mkdir -p -m 0755 $zips_root`;
+`mkdir -p -m 0755 $log_root`;
 
 my $check = 0;
 GetOptions (
@@ -30,15 +30,17 @@ GetOptions (
 
 my $svn_repo = {
 	doc => {
-		url => 'http://10.1.42.140/svn/apf_apn_ten_svn_doc/',
+		url => $conf{'url-doc'},
 		repo => '',
 		ver => 0,
+		verto => 0,
 		zips => [],
 	},
 	src => {
-		url => 'http://10.1.42.140/svn/apf_apn_ten_svn_src/',
+		url => $conf{'url-src'},
 		repo => '',
 		ver => 0,
+		verto => 0,
 		zips => [],
 	},
 };
@@ -73,8 +75,8 @@ else {
 	}
 
 	if ($err & 1) {
-		print "Please fix the warnings.\n";
-		print "Then remove the suffix `${err_suffix}'.\n";
+		print "Frist, you must fix the warnings.\n";
+		print "Second, remove the suffix `${err_suffix}'.\n";
 	}
 	elsif ($err & 2) {
 		print "Please run with -c|--check frist.\n";
@@ -86,9 +88,27 @@ else {
 			chmod 0744, $act;
 
 			print "\n\$ $act\n";
-			system($act) and die "Error when run $act.\n";
+			my $ret = readpipe("$act");
+			my $ret_value = $?;
+			chmod 0644, $act;
+
+			my $id = `cat $act | sed -n '2p'`;
+			$id =~ s/^#\s+(\w+)\s+(\d+)\s+->\s+(\d+).*$/$1-$2-$3/;
+			chomp $id;
+
+			my $log_file = $act;
+			$log_file =~ s%(.*/).*%$1%;
+			$log_file .= "$id.log";
+			rename $act, $log_file;
+
+			open my $lfh, ">> $log_file";
+			print $lfh "\n", '#' x 27;
+			print $lfh " LOG ", '#' x 27, "\n";
+			print $lfh $ret;
+			close $lfh;
 		}
 	}
+
 	exit;
 }
 
@@ -113,6 +133,7 @@ foreach my $zip_file (@zips) {
 	}
 }
 
+# Get the order for update.
 foreach my $type (keys %$svn_repo) {
 	my @t_zips = grep {/^($type)-incrementalbackup-\d{8}T\d{4}-(\d+)-(\d+)\.7z$/} @zips;
 
@@ -120,19 +141,14 @@ foreach my $type (keys %$svn_repo) {
 		my $found = 0;
 		my @faultage;
 		foreach my $t_7z (@t_zips) {
-			my $vir_ver;
-			if (@{$svn_repo->{$type}->{zips}}) {
-				$vir_ver = $svn_repo->{$type}->{zips}->[-1];
-				$vir_ver =~ s/.*-(\d+)\.7z/$1/;
-			}
-			else {
-				$vir_ver = $svn_repo->{$type}->{ver};
-			}
+			my $vir_ver = $svn_repo->{$type}->{'verto'}
+				? $svn_repo->{$type}->{'verto'} : $svn_repo->{$type}->{'ver'};
 
 			if ($t_7z =~ m/^${type}-incrementalbackup-\d{8}T\d{4}-(\d+)-(\d+)\.7z/) {
 				my ($ver_beg, $ver_end) = ($1, $2);
 				if ($vir_ver + 1 == $ver_beg) {
 					push @{$svn_repo->{$type}->{zips}}, $t_7z;
+					$svn_repo->{$type}->{'verto'} = $ver_end;
 					$found = 1;
 				}
 				elsif ($vir_ver + 1 < $ver_beg) {
@@ -148,6 +164,7 @@ foreach my $type (keys %$svn_repo) {
 	}
 }
 
+# Check md5sum and generate the command sscript.
 foreach my $type (keys %$svn_repo) {
 	my @actions;
 	print "Prepare update $type:\n";
@@ -184,6 +201,7 @@ foreach my $type (keys %$svn_repo) {
 	open my $ofh, "> $chkok_file$err_suffix";
 	binmode($ofh, ':encoding(utf8)');
 	print $ofh "#!/bin/bash -ex\n";
+	print $ofh "# $type ",$svn_repo->{$type}->{'ver'} + 1," -> $svn_repo->{$type}->{'verto'}\n";
 	print $ofh join "\n", @actions;
 	print $ofh "\n";
 	close $ofh;
@@ -219,7 +237,7 @@ sub md5sum_check {
 sub get_version {
 	my $url = shift;
 
-	my @_ver = `svn log -l1 -q "$url"`;
+	my @_ver = `svn log -l1 -q $conf{'svn-cer'} "$url"`;
 	my $retval = $?;
 
 	if ($retval) {
