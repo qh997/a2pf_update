@@ -57,11 +57,9 @@ my $chk_act = {
 
 my $check = 0;
 my $file_7z = '';
-my $extract = 0;
 GetOptions (
 	'c|check' => \$check,
 	'f|file=s' => \$file_7z,
-	'x|extract' => \$extract,
 );
 
 `mkdir -p $log_root` if (! -d $log_root);
@@ -104,15 +102,16 @@ foreach $file_7z (@file_7zs) {
 		my $filelist_csv = "$unpack_path/filelist-${time_tag}.csv";
 
 		`rm -rf $check_ok*`;
+		`rm -rf $unpack_path`;
 
-		unpack_7z($file_7z, $unpack_path) if ($extract);
+		unpack_7z($file_7z, $unpack_path);
 
 		print 'Parsing csv ...';
 		my %types;
 		my $csv = Text::CSV->new({binary => 1})  # should set binary attribute.
 			or die "Cannot use CSV: ".Text::CSV->error_diag();
 
-		open my $fh, "<:encoding(utf8)", "$filelist_csv" or die "$filelist_csv: $!";
+		open my $fh, "<:encoding(utf8)", "$filelist_csv" or die "\n$filelist_csv: $!";
 		my $row_nu = 0;
 		while (my $row = $csv->getline($fh)) {
 			if ($row_nu++) {
@@ -188,11 +187,11 @@ exit if $check;
 
 if ($still_w) {
 	print "\n";
-	print " ****************** FINAL WARNING ****************\n";
-	print " * There are still detected something abnormal.  *\n";
-	print " * I cannot let you go on.                       *\n";
-	print " * Please be sure to fix them.                   *\n";
-	print " *************************************************\n";
+	print " *************** FINAL WARNING **************\n";
+	print " * There still detected something abnormal. *\n";
+	print " * I cannot let you go on.                  *\n";
+	print " * Please be sure to fix them.              *\n";
+	print " ********************************************\n";
 	exit;
 }
 else {
