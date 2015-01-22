@@ -193,21 +193,23 @@ foreach my $type (keys %$svn_repo) {
 		}
 	}
 
-	my $chkok_file = $check_ok;
-	$chkok_file =~ s/TYPE/$type/;
-	$chkok_file = "$log_root/$chkok_file";
-	$err_suffix = @need_fix ? '.need_fix' : '';
+	if (@actions) {
+		my $chkok_file = $check_ok;
+		$chkok_file =~ s/TYPE/$type/;
+		$chkok_file = "$log_root/$chkok_file";
+		$err_suffix = @need_fix ? '.need_fix' : '';
 
-	print "Building `$chkok_file$err_suffix'.\n";
-	open my $ofh, "> $chkok_file$err_suffix";
-	binmode($ofh, ':encoding(utf8)');
-	print $ofh "#!/bin/bash -ex\n";
-	print $ofh "# $type ",$svn_repo->{$type}->{'ver'} + 1," -> $svn_repo->{$type}->{'verto'}\n";
-	print $ofh join "\n", @actions;
-	print $ofh "\n";
-	close $ofh;
+		print "Building `$chkok_file$err_suffix'.\n";
+		open my $ofh, "> $chkok_file$err_suffix";
+		binmode($ofh, ':encoding(utf8)');
+		print $ofh "#!/bin/bash -ex\n";
+		print $ofh "# $type ",$svn_repo->{$type}->{'ver'} + 1," -> $svn_repo->{$type}->{'verto'}\n";
+		print $ofh join "\n", @actions;
+		print $ofh "\n";
+		close $ofh;
 
-	print "\n";
+		print "\n";
+	}
 }
 
 sub unpack_7z {
