@@ -1,0 +1,11 @@
+work-root = /path/to/your/work/directory
+zips-path = archives
+log-path = log
+svn-cer = --username "username" --password "password"
+
+fileserver-root = /path/to/fs/root
+
+url-doc = http://hostname/svn/example_doc/
+url-src = http://hostname/svn/example_src/
+repo-doc = /path/to/repo-doc
+repo-src = /path/to/repo-src
