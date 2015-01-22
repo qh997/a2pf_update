@@ -84,6 +84,9 @@ else {
 	else {
 		print "OK, let's do it.\n";
 
+		my $mail_id = `mail-maker.pl -s svn-update`;
+		chomp $mail_id;
+
 		foreach my $act (@acts) {
 			chmod 0744, $act;
 
@@ -107,7 +110,17 @@ else {
 			print $lfh " LOG ", '#' x 27, "\n";
 			print $lfh $ret;
 			close $lfh;
+
+			my $_type = `cat $log_file | sed -n '2p'`;
+			chomp $_type;
+			my $_ver = $_type;
+			$_type =~ s/#\s+(\S+)\s+.*/$1/;
+			$_ver =~ s/#\s+\S+\s+(.*)/$1/;
+
+			`mail-maker.pl -i $mail_id ${_type}-VER="$_ver"`;
 		}
+
+		`mail-maker.pl -i $mail_id -f`;
 	}
 
 	exit;
