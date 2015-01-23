@@ -28,5 +28,5 @@ else
 
 	esudo cp "${work_path}/${tag}.7z" "${tag_root}"
 
-	sudo mail-maker.pl -s pack-for-tag -f TAG=${tag}
+	sudo mail-maker -s pack-for-tag -f TAG=${tag}
 fi

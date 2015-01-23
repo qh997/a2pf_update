@@ -84,7 +84,7 @@ else {
 	else {
 		print "OK, let's do it.\n";
 
-		my $mail_id = `mail-maker.pl -s svn-update`;
+		my $mail_id = `mail-maker -s svn-update`;
 		chomp $mail_id;
 
 		foreach my $act (@acts) {
@@ -117,10 +117,10 @@ else {
 			$_type =~ s/#\s+(\S+)\s+.*/$1/;
 			$_ver =~ s/#\s+\S+\s+(.*)/$1/;
 
-			`mail-maker.pl -i $mail_id ${_type}-VER="$_ver"`;
+			`mail-maker -i $mail_id ${_type}-VER="$_ver"`;
 		}
 
-		`mail-maker.pl -i $mail_id -f`;
+		`mail-maker -i $mail_id -f`;
 	}
 
 	exit;

@@ -219,6 +219,8 @@ else {
 		print $lfh $ret;
 		close $lfh;
 	}
+
+	`mail-maker -s fs-update -f`;
 }
 
 sub unpack_7z {
