@@ -220,6 +220,9 @@ else {
 		close $lfh;
 	}
 
+	`chown -R nobody:nogroup "$fs_root"`;
+	`chmod -R 777 "$fs_root"`;
+
 	`mail-maker -s fs-update -f`;
 }
 
