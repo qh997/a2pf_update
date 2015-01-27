@@ -1,10 +1,9 @@
-#!/bin/bash
+#!/bin/bash -ex
 
 svn_ser=`cat settings.conf | grep 'svn-cer' | awk -F= '{print $2}' | sed -e 's/^ *//' -e 's/ *$//'`
 tag_url=`cat settings.conf | grep 'tag-url' | awk -F= '{print $2}' | sed -e 's/^ *//' -e 's/ *$//'`
 
-tag=$(svn ls $svn_ser "${tag_url}"
-	| sort -r | sed -n '1p' | sed 's/\///')
+tag=$(svn ls $svn_ser "${tag_url}" | sort -r | sed -n '1p' | sed 's/\///')
 
 tag=${1-$tag}
 
@@ -26,7 +25,9 @@ else
 	rm -rf "${work_path}/${tag}.7z"
 	7z a "${work_path}/${tag}.7z" "${work_path}/${tag}"
 
-	esudo cp "${work_path}/${tag}.7z" "${tag_root}"
+	sudo cp "${work_path}/${tag}.7z" "${tag_root}"
+	# sudo chmod 644 "${tag_root}/*"
+	# sudo chown nobody:nogroup -R "${tag_root}"
 
 	sudo mail-maker -s pack-for-tag -f TAG=${tag}
 fi
