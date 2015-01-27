@@ -311,7 +311,7 @@ sub item_check {
 		push @err, 100; # Type no defined.
 	}
 
-	if (defined $chk_act->{$_type}->{deed}) {
+	if (defined $chk_act->{$_type} && defined $chk_act->{$_type}->{deed}) {
 		my $action = $chk_act->{$_type}->{deed};
 		$diff_file =~ s#'#'"'"'#;
 		$base_file =~ s#'#'"'"'#;
