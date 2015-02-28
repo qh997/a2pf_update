@@ -158,9 +158,9 @@ foreach $file_7z (@file_7zs) {
 			print " - ********** WARNING **********\n";
 			print " - There are some warnings should be fixed.\n";
 			print " - Frist check the script `vim $check_ok$err_suffix'.\n";
-			print " -   Find the lines which start with `#W', and fix those warning lines.\n";
-			print " - Second `mv $check_ok$err_suffix $check_ok'\n";
-			print " - Then `$0'\n";
+			print " - Second find the lines which start with `#W', and check/fix those warning lines.\n";
+			print " - Then `mv $check_ok$err_suffix $check_ok'\n";
+			print " - At last `$0'\n";
 		}
 	}
 	else {
